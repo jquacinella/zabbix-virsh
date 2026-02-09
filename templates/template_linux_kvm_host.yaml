@@ -1,0 +1,41 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - name: 'Templates/Virtualization'
+  templates:
+    - template: 'Linux KVM Host with VM Discovery'
+      name: 'Linux KVM Host with VM Discovery'
+      groups:
+        - name: 'Templates/Virtualization'
+      discovery_rules:
+        - name: 'Discover VMs'
+          key: kvm.vm.discovery
+          delay: 5m
+          item_prototypes:
+            - name: 'VM {#VM.NAME} state'
+              key: 'kvm.vm.state[{#VM.NAME}]'
+              delay: 1m
+              value_type: TEXT
+              tags:
+                - tag: component
+                  value: vm
+                - tag: vm_name
+                  value: '{#VM.NAME}'
+            - name: 'VM {#VM.NAME} UUID'
+              key: 'kvm.vm.uuid[{#VM.NAME}]'
+              delay: 1h
+              value_type: TEXT
+              preprocessing:
+                - type: JAVASCRIPT
+                  parameters:
+                    - 'return "{#VM.UUID}";'
+          trigger_prototypes:
+            - name: 'VM {#VM.NAME} state changed'
+              expression: 'last(/Linux KVM Host with VM Discovery/kvm.vm.state[{#VM.NAME}],#1)<>last(/Linux KVM Host with VM Discovery/kvm.vm.state[{#VM.NAME}],#2)'
+              priority: INFO
+              manual_close: 'YES'
+              tags:
+                - tag: component
+                  value: vm
+                - tag: vm_name
+                  value: '{#VM.NAME}'

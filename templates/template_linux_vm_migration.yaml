@@ -1,0 +1,26 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - name: 'Templates/Operating systems'
+  templates:
+    - template: 'Linux VM Migration Tracking'
+      name: 'Linux VM Migration Tracking'
+      groups:
+        - name: 'Templates/Operating systems'
+      items:
+        - name: 'Current hypervisor'
+          key: vm.current.hypervisor
+          type: ZABBIX_TRAPPER
+          value_type: TEXT
+          tags:
+            - tag: component
+              value: hypervisor
+      triggers:
+        - name: 'VM migrated to different hypervisor'
+          expression: 'last(/Linux VM Migration Tracking/vm.current.hypervisor,#1)<>last(/Linux VM Migration Tracking/vm.current.hypervisor,#2) and length(last(/Linux VM Migration Tracking/vm.current.hypervisor))>0'
+          priority: AVERAGE
+          manual_close: 'YES'
+          description: 'VM {HOST.NAME} has migrated from one hypervisor to another'
+          tags:
+            - tag: component
+              value: migration

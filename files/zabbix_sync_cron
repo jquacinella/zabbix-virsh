@@ -1,0 +1,2 @@
+# Sync VM inventory every 5 minutes
+*/5 * * * * root /usr/local/bin/sync_vm_inventory.py >> /var/log/zabbix/vm_sync.log 2>&1

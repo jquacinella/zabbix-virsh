@@ -1,0 +1,52 @@
+---
+- name: Deploy KVM monitoring to Zabbix KVM hosts
+  hosts: kvm_hosts
+  become: yes
+
+  tasks:
+    - name: Ensure jq is installed
+      package:
+        name: jq
+        state: present
+
+    - name: Install KVM VM discovery script
+      copy:
+        src: ../files/zabbix_kvm_discovery.sh
+        dest: /usr/local/bin/zabbix_kvm_discovery.sh
+        mode: '0755'
+        owner: root
+        group: root
+
+    - name: Create zabbix_agent2 config directory
+      file:
+        path: /etc/zabbix/zabbix_agent2.d
+        state: directory
+        mode: '0755'
+
+    - name: Deploy KVM monitoring UserParameters
+      copy:
+        dest: /etc/zabbix/zabbix_agent2.d/kvm_monitoring.conf
+        mode: '0644'
+        owner: root
+        group: root
+        content: |
+          # KVM VM Discovery and Monitoring
+          UserParameter=kvm.vm.discovery,/usr/local/bin/zabbix_kvm_discovery.sh
+          UserParameter=kvm.vm.state[*],virsh domstate "$1" 2>/dev/null || echo "unknown"
+          UserParameter=kvm.vm.host,hostname -f
+      notify: restart zabbix-agent2
+
+    - name: Test discovery script execution
+      command: /usr/local/bin/zabbix_kvm_discovery.sh
+      register: discovery_test
+      changed_when: false
+
+    - name: Display discovery output
+      debug:
+        var: discovery_test.stdout
+
+  handlers:
+    - name: restart zabbix-agent2
+      service:
+        name: zabbix-agent2
+        state: restarted
